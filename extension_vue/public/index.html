@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%; margin: 0; padding: 0; min-height: 600px;">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <title><%= htmlWebpackPlugin.options.title %></title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 600px !important;
+        height: 600px !important;
+        min-width: 600px !important;
+        min-height: 600px !important;
+        overflow: auto;
+      }
+      #app {
+        width: 600px !important;
+        height: 600px !important;
+        min-height: 600px !important;
+      }
+      
+      /* Ensure full screen in tab mode */
+      body.tab-mode {
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+    </style>
+    <!-- External scripts instead of inline -->
+    <script src="<%= BASE_URL %>popup-sizer.js"></script>
+    <link rel="stylesheet" href="<%= BASE_URL %>popup-fix.css">
+  </head>
+  <body>
+    <noscript>
+      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>cript>
+    <!-- Move inline script to external file -->
+    <script src="<%= BASE_URL %>popup-mode-detector.js"></script>
+  </body>
+</html>d. Please enable it to continue.</strong>

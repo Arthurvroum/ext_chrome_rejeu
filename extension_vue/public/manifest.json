@@ -1,0 +1,40 @@
+{
+  "name": "Network Request Recorder & Replay",
+  "version": "1.0.0",
+  "description": "Extension Chrome permettant l'enregistrement et le rejeu de requêtes réseau HTTP avec des fonctionnalités avancées de capture et de substitution de variables.",
+  "manifest_version": 3,
+  "permissions": [
+    "webRequest",
+    "scripting",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Request Recorder & Replay",
+    "default_width": 600,
+    "default_height": 600
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["*.js", "*.html", "index.html", "assets/*", "popup-fix.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
