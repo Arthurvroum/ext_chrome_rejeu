@@ -1,9 +1,6 @@
 <template>
   <div id="app">
-    <!-- Add diagnostics button for debugging -->
-    <div class="debug-corner">
-      <DiagnosticsButton />
-    </div>
+    <!-- Diagnostic button removed -->
     
     <!-- For replay tab mode -->
     <ReplayTab v-if="isReplayTab" class="fullscreen-component" />
@@ -15,53 +12,26 @@
       </header>
 
       <main>
-        <!-- Simple mode - just recording interface -->
-        <div v-if="simpleMode" class="simple-mode">
-          <RecordTab @open-replay="openAdvancedWindow('replay')" />
-          <div class="advanced-options">
-            <button @click="openAdvancedWindow('record')" class="advanced-button">
-              Advanced Options
-            </button>
-          </div>
-        </div>
-        
-        <!-- Advanced mode with tabs for all functions -->
-        <div v-else class="advanced-mode">
+        <!-- Simple two-tab interface -->
+        <div class="simple-interface">
           <div class="tabs">
             <button 
               :class="{ active: currentTab === 'record' }" 
               @click="currentTab = 'record'"
             >
-              Enregistrement
+              Record
             </button>
             <button 
               :class="{ active: currentTab === 'replay' }" 
               @click="currentTab = 'replay'"
             >
-              Rejeu
-            </button>
-            <button 
-              :class="{ active: currentTab === 'config' }" 
-              @click="currentTab = 'config'"
-            >
-              Configuration
-            </button>
-            <button 
-              :class="{ active: currentTab === 'reports' }" 
-              @click="currentTab = 'reports'"
-            >
-              Rapports
-            </button>
-            <button @click="simpleMode = true" class="back-button">
-              Back to Simple Mode
+              Replay
             </button>
           </div>
           
           <div class="tab-content">
             <RecordTab v-if="currentTab === 'record'" @open-replay="switchToReplay" />
             <ReplayTab v-else-if="currentTab === 'replay'" />
-            <ConfigTab v-else-if="currentTab === 'config'" />
-            <ReportsTab v-else-if="currentTab === 'reports'" />
           </div>
         </div>
       </main>
@@ -70,26 +40,22 @@
 </template>
 
 <script>
-import RecordTab from './components/RecordTab.vue'
+// Update the import path to the new location
+import RecordTab from './components/record/RecordTab.vue'
 import ReplayTab from './components/ReplayTab.vue'
-import ConfigTab from './components/ConfigTab.vue'
-import ReportsTab from './components/ReportsTab.vue'
-import DiagnosticsButton from './components/DiagnosticsButton.vue'
+// Removed DiagnosticsButton import
 
 export default {
   name: 'App',
   components: {
     RecordTab,
-    ReplayTab,
-    ConfigTab,
-    ReportsTab,
-    DiagnosticsButton
+    ReplayTab
+    // Removed DiagnosticsButton component
   },
   data() {
     return {
       currentTab: 'record',
-      simpleMode: true, // Start in simple mode
-      isReplayTab: false // Renamed from isReplayWindow
+      isReplayTab: false
     }
   },
   mounted() {
@@ -131,9 +97,8 @@ export default {
     
     // For regular extension mode
     const tab = urlParams.get('tab');
-    if (tab) {
+    if (tab === 'record' || tab === 'replay') {
       this.currentTab = tab;
-      this.simpleMode = false;
       document.getElementById('app').classList.add('full-window');
       
       // These same styles are needed for tab mode
@@ -146,22 +111,21 @@ export default {
     }
   },
   methods: {
-    openAdvancedWindow(tab = 'record') {
-      // Now using the runtime message to open a tab instead of a window
-      chrome.runtime.sendMessage({
-        action: 'openAdvancedWindow',
-        tab: tab
-      }, (response) => {
-        if (response && response.success) {
-          console.log('Advanced tab opened with ID:', response.tabId);
-        } else {
-          console.error('Failed to open advanced tab');
-        }
-      });
-    },
-    
     switchToReplay() {
       this.currentTab = 'replay';
+    },
+    
+    openReplayTab() {
+      chrome.runtime.sendMessage({
+        action: 'openAdvancedWindow',
+        tab: 'replay'
+      }, (response) => {
+        if (response && response.success) {
+          console.log('Replay tab opened with ID:', response.tabId);
+        } else {
+          console.error('Failed to open replay tab');
+        }
+      });
     }
   }
 }
@@ -237,9 +201,7 @@ body.popup-mode #app {
 
 /* Ensure tab components take full width in tab mode */
 #app.full-window .record-tab,
-#app.full-window .replay-tab,
-#app.full-window .config-tab,
-#app.full-window .reports-tab {
+#app.full-window .replay-tab {
   width: 100%;
   max-width: 100%;
   padding: 20px;
@@ -277,37 +239,65 @@ h1 {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
+/* Simplified interface styles */
+.simple-interface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
 .tabs {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  padding: 5px 0;
+  padding: 10px 0;
   background-color: #f8f9fa;
   border-bottom: 1px solid #dee2e6;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  gap: 5px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-button {
-  padding: 8px 12px; /* Slightly larger buttons */
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
+.tabs button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  background-color: #e9ecef;
+  color: #495057;
   cursor: pointer;
-  margin: 3px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  white-space: nowrap;
+  transition: all 0.2s;
 }
 
-/* Full window mode buttons */
-.full-window button {
-  padding: 12px 20px;
-  font-size: 1.1rem;
-  margin: 5px;
+.tabs button.active {
+  background-color: #007bff;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+}
+
+.tabs button:hover:not(.active) {
+  background-color: #dee2e6;
+}
+
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+  overflow: auto;
+}
+
+.tab-content > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* For full window buttons */
+.full-window .tabs button {
+  padding: 12px 25px;
+  font-size: 1.2rem;
 }
 
 .full-window h1 {
@@ -323,42 +313,6 @@ main {
   height: 100%; /* Make sure main takes full height */
 }
 
-.tab-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 5px 0;
-}
-
-.tab-content > * {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Styling for the simple mode display */
-.simple-mode {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.advanced-options {
-  margin-top: 10px; /* Less margin */
-  text-align: center;
-  flex-shrink: 0; /* Don't allow it to shrink */
-}
-
-button.advanced-button {
-  background-color: #6c757d;
-  color: white;
-  border-color: #6c757d;
-  padding: 10px 15px; /* Smaller button */
-  font-size: 1rem;
-  width: 80%; /* Control width */
-  max-width: 300px;
-}
-
 /* For replay tab in the full window mode */
 .full-window .replay-tab {
   width: 100% !important;
@@ -366,18 +320,6 @@ button.advanced-button {
   margin: 0 auto !important;
   padding: 20px !important;
   height: 100%;
-}
-
-.debug-corner {
-  position: fixed !important;
-  top: 5px !important;
-  right: 5px !important;
-  z-index: 2000 !important; /* Higher z-index to ensure it's above everything */
-  opacity: 0.7;
-}
-
-.debug-corner:hover {
-  opacity: 1;
 }
 
 /* Ensure full window components take the entire width */

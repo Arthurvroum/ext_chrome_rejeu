@@ -1,0 +1,78 @@
+<template>
+  <div class="replay-option" v-if="show">
+    <p>Recording completed with {{ requestCount }} requests.</p>
+    <div class="replay-buttons">
+      <button @click="openReplay" class="replay-now-btn">
+        Open Replay Tab
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ReplayOption',
+  props: {
+    show: {
+      type: Boolean,
+      default: false
+    },
+    requestCount: {
+      type: Number,
+      default: 0
+    }
+  },
+  methods: {
+    openReplay() {
+      this.$emit('open-replay');
+    }
+  }
+}
+</script>
+
+<style scoped>
+.replay-option {
+  margin: 10px 0;
+  padding: 15px;
+  background-color: #e8f4ff;
+  border-radius: 10px;
+  text-align: center;
+  animation: fadeIn 0.7s ease-in-out;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+}
+
+.replay-option p {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.replay-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.replay-now-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 12px 25px;
+  font-weight: bold;
+  font-size: 1.15rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.replay-now-btn:hover {
+  background-color: #0069d9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

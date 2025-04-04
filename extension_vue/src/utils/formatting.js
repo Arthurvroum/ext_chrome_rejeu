@@ -52,3 +52,17 @@ export function formatDate(date) {
   const d = new Date(date);
   return d.toLocaleString();
 }
+
+/**
+ * Extract path from URL
+ * @param {string} url - Full URL
+ * @returns {string} - Path portion of URL
+ */
+export function getPathFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname;
+  } catch (e) {
+    return url;
+  }
+}
