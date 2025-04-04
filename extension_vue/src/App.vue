@@ -6,7 +6,7 @@
     </div>
     
     <!-- For replay tab mode -->
-    <ReplayTab v-if="isReplayTab" />
+    <ReplayTab v-if="isReplayTab" class="fullscreen-component" />
     
     <!-- Regular extension UI -->
     <template v-else>
@@ -102,11 +102,30 @@ export default {
       
       // Add these lines to ensure proper full-screen display
       document.documentElement.style.height = '100%';
+      document.documentElement.style.width = '100%';
       document.documentElement.style.overflow = 'hidden';
-      document.body.style.height = '100%';
+      document.body.style.height = '100%'; 
+      document.body.style.width = '100%';
       document.body.style.margin = '0';
       document.body.style.padding = '0';
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'relative';
+      
+      // Force all parent containers to take full width
+      setTimeout(() => {
+        const appElement = document.getElementById('app');
+        if (appElement) {
+          // Force full width with !important
+          appElement.style.cssText += 'width: 100vw !important; max-width: 100vw !important; left: 0 !important; position: absolute !important;';
+          
+          // Also find any direct children and ensure they take full width
+          const children = appElement.children;
+          for (let i = 0; i < children.length; i++) {
+            children[i].style.cssText += 'width: 100% !important; max-width: 100% !important;';
+          }
+        }
+      }, 0);
+      
       return;
     }
     
@@ -182,14 +201,57 @@ body.popup-mode #app {
 
 /* For full window mode - take all available space */
 #app.full-window {
-  position: fixed; /* Changed from absolute to fixed */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  max-width: none !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+/* Full window content container should be centered and take full width */
+#app.full-window .tab-content,
+#app.full-window main {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0 auto;
+  box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+/* Make tab content take full width but center the actual content */
+#app.full-window .tab-content > * {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+/* Ensure tab components take full width in tab mode */
+#app.full-window .record-tab,
+#app.full-window .replay-tab,
+#app.full-window .config-tab,
+#app.full-window .reports-tab {
+  width: 100%;
+  max-width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Container for actual content in full-width mode */
+.content-container {
+  width: 100%;
+  max-width: 1400px; /* Wider but not full screen width */
+  margin: 0 auto;
+  box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 header {
@@ -198,6 +260,15 @@ header {
   border-bottom: 1px solid #dee2e6;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+/* Make header take full width in tab mode */
+#app.full-window header {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 h1 {
@@ -298,14 +369,28 @@ button.advanced-button {
 }
 
 .debug-corner {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 1000;
+  position: fixed !important;
+  top: 5px !important;
+  right: 5px !important;
+  z-index: 2000 !important; /* Higher z-index to ensure it's above everything */
   opacity: 0.7;
 }
 
 .debug-corner:hover {
   opacity: 1;
+}
+
+/* Ensure full window components take the entire width */
+.fullscreen-component {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  box-sizing: border-box !important;
 }
 </style>

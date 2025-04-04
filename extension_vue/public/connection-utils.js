@@ -27,26 +27,87 @@ function checkContentScriptAvailable(tabId, callback) {
   }
 }
 
-// Inject content script into a tab
+// Check if we can inject into this URL - enhanced with better detection
+function canInjectIntoUrl(url) {
+  // Don't try to inject into chrome:// URLs and other restricted protocols
+  if (!url) {
+    console.warn('Empty URL provided to canInjectIntoUrl');
+    return false;
+  }
+  
+  const restrictedProtocols = [
+    'chrome://', 
+    'chrome-extension://', 
+    'devtools://',
+    'chrome-devtools://', 
+    'view-source:',
+    'about:',
+    'file://'
+  ];
+  
+  for (const protocol of restrictedProtocols) {
+    if (url.startsWith(protocol)) {
+      console.warn(`URL with restricted protocol detected: ${protocol}`);
+      return false;
+    }
+  }
+  
+  // Only allow http/https URLs (more restrictive)
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    console.warn(`URL doesn't use HTTP/HTTPS protocol: ${url}`);
+    return false;
+  }
+  
+  return true;
+}
+
+// Inject content script into a tab with improved error handling
 function injectContentScript(tabId, callback) {
   console.log(`Attempting to inject content script into tab ${tabId}`);
   
+  // Check if we have permission to access the tab first
   try {
-    chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: ['content-script.js']
-    })
-    .then(() => {
-      console.log(`Content script injected successfully into tab ${tabId}`);
-      callback(true);
-    })
-    .catch(error => {
-      console.error(`Failed to inject content script into tab ${tabId}:`, error);
-      callback(false);
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        const errorMsg = `Error getting tab ${tabId} info: ${chrome.runtime.lastError.message}`;
+        console.error(errorMsg);
+        if (callback) callback(false, errorMsg);
+        return;
+      }
+      
+      // Check if we can inject into this URL
+      if (!canInjectIntoUrl(tab.url)) {
+        const errorMsg = `Cannot inject content script into restricted URL: ${tab.url}`;
+        console.warn(errorMsg);
+        if (callback) callback(false, errorMsg);
+        return;
+      }
+      
+      // Safe to inject
+      try {
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content-script.js']
+        })
+        .then(() => {
+          console.log(`Content script injected successfully into tab ${tabId}`);
+          if (callback) callback(true);
+        })
+        .catch(error => {
+          const errorMsg = `Failed to inject content script into tab ${tabId}: ${error.message}`;
+          console.error(errorMsg);
+          if (callback) callback(false, errorMsg);
+        });
+      } catch (error) {
+        const errorMsg = `Error during content script injection for tab ${tabId}: ${error.message}`;
+        console.error(errorMsg);
+        if (callback) callback(false, errorMsg);
+      }
     });
   } catch (error) {
-    console.error(`Error during content script injection for tab ${tabId}:`, error);
-    callback(false);
+    const errorMsg = `Exception accessing tab ${tabId}: ${error.message}`;
+    console.error(errorMsg);
+    if (callback) callback(false, errorMsg);
   }
 }
 
@@ -90,13 +151,15 @@ if (typeof importScripts === 'function') {
   self.connectionUtils = {
     checkContentScriptAvailable,
     injectContentScript,
-    ensureContentScript
+    ensureContentScript,
+    canInjectIntoUrl
   };
 } else {
   // We're in a regular script
   window.connectionUtils = {
     checkContentScriptAvailable,
     injectContentScript,
-    ensureContentScript
+    ensureContentScript,
+    canInjectIntoUrl
   };
 }

@@ -1,79 +1,94 @@
 /**
- * Utility functions for robust message handling in Chrome extensions
+ * Message utilities for Chrome extension
+ * Provides safe messaging and data transfer capabilities
  */
 
-// Safely send message to a tab with retry mechanism
-function safelySendTabMessage(tabId, message, callback = null, retries = 3) {
-  console.log(`[MessageUtils] Sending message to tab ${tabId}:`, message.action);
-  
+// Helper for safely sending messages with proper error handling
+function safelySendMessage(target, message, callback = null) {
   try {
-    chrome.tabs.sendMessage(tabId, message, response => {
-      if (chrome.runtime.lastError) {
-        console.warn(`[MessageUtils] Error sending message to tab ${tabId}:`, chrome.runtime.lastError.message);
-        
-        // If we have retries left, try again after a delay
-        if (retries > 0) {
-          setTimeout(() => {
-            console.log(`[MessageUtils] Retrying message to tab ${tabId} (${retries} retries left)`);
-            safelySendTabMessage(tabId, message, callback, retries - 1);
-          }, 500);
+    if (target === 'runtime') {
+      // Send to extension runtime (background)
+      chrome.runtime.sendMessage(message, response => {
+        if (chrome.runtime.lastError) {
+          console.warn('Runtime message error:', chrome.runtime.lastError.message);
+          if (callback) callback({ error: chrome.runtime.lastError.message });
         } else if (callback) {
-          callback({ error: chrome.runtime.lastError.message });
+          callback(response);
         }
-      } else if (callback) {
-        callback(response);
-      }
-    });
+      });
+    } else if (typeof target === 'number') {
+      // Send to specific tab
+      chrome.tabs.sendMessage(target, message, response => {
+        if (chrome.runtime.lastError) {
+          console.warn(`Tab message error (${target}):`, chrome.runtime.lastError.message);
+          if (callback) callback({ error: chrome.runtime.lastError.message });
+        } else if (callback) {
+          callback(response);
+        }
+      });
+    } else {
+      throw new Error('Invalid target type. Use "runtime" or a tab ID number.');
+    }
   } catch (error) {
-    console.error(`[MessageUtils] Exception sending message to tab ${tabId}:`, error);
+    console.error('Message send error:', error);
     if (callback) callback({ error: error.message });
   }
 }
 
-// Check if content script is loaded in a tab
-function checkContentScriptLoaded(tabId, callback) {
-  console.log(`[MessageUtils] Checking if content script is loaded in tab ${tabId}`);
-  
-  safelySendTabMessage(tabId, { action: 'pingContentScript' }, response => {
-    const isLoaded = response && !response.error;
-    console.log(`[MessageUtils] Content script in tab ${tabId} is ${isLoaded ? 'loaded' : 'not loaded'}`);
-    callback(isLoaded);
-  }, 1); // Just one attempt for checking
-}
-
-// Ensure content script is loaded, injecting if necessary
-function ensureContentScriptLoaded(tabId, callback) {
-  checkContentScriptLoaded(tabId, isLoaded => {
-    if (isLoaded) {
-      callback(true);
+// Helper for safely sending tab messages with automatic content script checks
+function safelySendTabMessage(tabId, message, callback = null) {
+  chrome.tabs.get(tabId, tab => {
+    if (chrome.runtime.lastError) {
+      console.warn(`Tab get error (${tabId}):`, chrome.runtime.lastError.message);
+      if (callback) callback({ error: chrome.runtime.lastError.message });
       return;
     }
     
-    console.log(`[MessageUtils] Injecting content script into tab ${tabId}`);
-    chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: ['content-script.js']
-    }).then(() => {
-      console.log(`[MessageUtils] Content script injected into tab ${tabId}`);
-      // Wait a moment for the script to initialize
-      setTimeout(() => {
-        checkContentScriptLoaded(tabId, isNowLoaded => {
-          callback(isNowLoaded);
+    // Try to send the message
+    safelySendMessage(tabId, message, response => {
+      if (response && response.error) {
+        // Content script might not be loaded, try to inject it
+        chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content-script.js']
+        }).then(() => {
+          // Try the message again after script is injected
+          setTimeout(() => {
+            safelySendMessage(tabId, message, callback);
+          }, 200);
+        }).catch(error => {
+          console.error('Script injection error:', error);
+          if (callback) callback({ error: error.message });
         });
-      }, 500);
-    }).catch(error => {
-      console.error(`[MessageUtils] Failed to inject content script into tab ${tabId}:`, error);
-      callback(false);
+      } else if (callback) {
+        callback(response);
+      }
     });
   });
 }
 
-// Export functions
-if (typeof importScripts === 'function') {
-  // We're in a worker context (background script)
-  self.messageUtils = {
-    safelySendTabMessage,
-    checkContentScriptLoaded,
-    ensureContentScriptLoaded
-  };
+// Send data between tabs via storage
+function transferDataBetweenTabs(data, key, callback = null) {
+  chrome.storage.local.set({ [key]: data, [`${key}_timestamp`]: Date.now() }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Data transfer error:', chrome.runtime.lastError.message);
+      if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+    } else {
+      if (callback) callback({ success: true });
+    }
+  });
+}
+
+// Export utilities
+const messageUtils = {
+  safelySendMessage,
+  safelySendTabMessage,
+  transferDataBetweenTabs
+};
+
+// Make available in the appropriate context
+if (typeof self !== 'undefined') {
+  self.messageUtils = messageUtils;
+} else if (typeof window !== 'undefined') {
+  window.messageUtils = messageUtils;
 }

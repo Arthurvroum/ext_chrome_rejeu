@@ -385,11 +385,17 @@ export default {
           return JSON.stringify(data, null, 2);
         } else if (typeof data === 'string') {
           // Try to parse as JSON if it's a string
-          const parsed = JSON.parse(data);
-          return JSON.stringify(parsed, null, 2);
+          try {
+            const parsed = JSON.parse(data);
+            return JSON.stringify(parsed, null, 2);
+          } catch {
+            // If parsing fails, just return the string
+            return data;
+          }
         }
         return String(data);
       } catch (e) {
+        console.error('Error formatting JSON:', e);
         return String(data);
       }
     },
@@ -401,12 +407,23 @@ export default {
     exportResults() {
       const resultData = {
         timestamp: new Date().toISOString(),
+        executionSummary: {
+          totalSteps: this.totalSteps,
+          successfulSteps: this.successfulSteps,
+          failedSteps: this.failedSteps,
+          skippedSteps: this.skippedSteps,
+          successRate: this.totalSteps ? Math.round((this.successfulSteps / this.totalSteps) * 100) : 0
+        },
         steps: this.replaySteps.map(step => ({
-          name: step.name,
+          name: step.name || `Request ${this.replaySteps.indexOf(step) + 1}`,
           url: step.url,
           method: step.method,
           status: step.status,
-          response: step.responseData,
+          response: step.responseData ? {
+            status: step.responseData.status,
+            statusText: step.responseData.statusText,
+            headers: step.responseData.headers
+          } : null,
           variables: step.capturedVariables,
           error: step.error
         }))
@@ -417,16 +434,181 @@ export default {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `replay-results-${new Date().toISOString().replace(/:/g, '-')}.json`;
+      a.download = `replay-results-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      
+      // Cleaner approach with timeout to ensure the browser has time to start the download
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 150);
     },
     
     generatePdfReport() {
-      // This would generate a PDF report
-      alert('PDF generation would be implemented here');
+      // Check if required libraries exist
+      if (typeof window.jspdf === 'undefined') {
+        // Dynamic import of jsPDF
+        import('jspdf').then(({ jsPDF }) => {
+          // Store the library globally for future use
+          window.jspdf = { jsPDF };
+          
+          // Try to import jspdf-autotable if needed
+          import('jspdf-autotable').then(() => {
+            this.createPdfReport();
+          }).catch(() => {
+            // If autotable fails, still try to generate a basic PDF
+            this.createPdfReport();
+          });
+        }).catch(error => {
+          console.error('Failed to load PDF generation library:', error);
+          alert('Could not load PDF generation library. Please check console for errors.');
+        });
+      } else {
+        // Use the already imported library
+        this.createPdfReport();
+      }
+    },
+    
+    createPdfReport() {
+      try {
+        // Use the imported library, whether it was dynamic or predefined
+        const jsPDF = window.jspdf ? window.jspdf.jsPDF : require('jspdf').jsPDF;
+        const doc = new jsPDF();
+        
+        // Add title with styling
+        doc.setFontSize(22);
+        doc.setTextColor(0, 51, 102);
+        doc.text('Network Request Replay Report', 14, 20);
+        
+        // Add metadata section
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+        
+        // Add execution summary
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 102);
+        doc.text('Execution Summary', 14, 45);
+        
+        // Create summary table if autotable is available
+        if (doc.autoTable) {
+          doc.autoTable({
+            startY: 50,
+            head: [['Metric', 'Value']],
+            body: [
+              ['Total Steps', this.totalSteps.toString()],
+              ['Successful', this.successfulSteps.toString()],
+              ['Failed', this.failedSteps.toString()],
+              ['Skipped', this.skippedSteps.toString()],
+              ['Success Rate', `${this.totalSteps ? Math.round((this.successfulSteps / this.totalSteps) * 100) : 0}%`]
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [0, 51, 102], textColor: [255, 255, 255] }
+          });
+        } else {
+          // Fallback if autoTable is not available
+          let y = 50;
+          doc.setFontSize(12);
+          doc.text(`Total Steps: ${this.totalSteps}`, 14, y); y += 8;
+          doc.text(`Successful: ${this.successfulSteps}`, 14, y); y += 8;
+          doc.text(`Failed: ${this.failedSteps}`, 14, y); y += 8;
+          doc.text(`Skipped: ${this.skippedSteps}`, 14, y); y += 8;
+          doc.text(`Success Rate: ${this.totalSteps ? Math.round((this.successfulSteps / this.totalSteps) * 100) : 0}%`, 14, y);
+          y += 15;
+        }
+        
+        // Get current Y position after summary table
+        const summaryEndY = doc.autoTable ? doc.autoTable.previous.finalY + 15 : 100;
+        
+        // Add step details section
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 102);
+        doc.text('Step Details', 14, summaryEndY);
+        
+        // Prepare data for steps table
+        const stepRows = this.replaySteps.map((step, index) => [
+          (index + 1).toString(),
+          step.name || `Request ${index + 1}`,
+          step.method,
+          this.truncateUrl(step.url),
+          step.status.toUpperCase(),
+          step.error || '-'
+        ]);
+        
+        // Create steps table
+        if (doc.autoTable) {
+          doc.autoTable({
+            startY: summaryEndY + 5,
+            head: [['#', 'Name', 'Method', 'URL', 'Status', 'Error']],
+            body: stepRows,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 51, 102], textColor: [255, 255, 255] },
+            columnStyles: {
+              0: { cellWidth: 10 },
+              2: { cellWidth: 20 },
+              4: { cellWidth: 25 }
+            },
+            didDrawCell: (data) => {
+              // Color status cells based on status
+              if (data.column.index === 4 && data.section === 'body') {
+                const status = this.replaySteps[data.row.index].status;
+                if (status === 'success') {
+                  doc.setFillColor(0, 128, 0, 0.1);
+                  doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                } else if (status === 'error') {
+                  doc.setFillColor(255, 0, 0, 0.1);
+                  doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                } else if (status === 'skipped') {
+                  doc.setFillColor(255, 165, 0, 0.1);
+                  doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                }
+              }
+            }
+          });
+        } else {
+          // Basic fallback for steps
+          let y = summaryEndY + 10;
+          this.replaySteps.forEach((step, index) => {
+            const statusText = step.status.toUpperCase();
+            doc.setFontSize(12);
+            doc.text(`${index + 1}. ${step.name || 'Request ' + (index + 1)} (${step.method})`, 14, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.text(`URL: ${this.truncateUrl(step.url)}`, 20, y);
+            y += 6;
+            doc.text(`Status: ${statusText}`, 20, y);
+            y += 6;
+            if (step.error) {
+              doc.text(`Error: ${step.error}`, 20, y);
+              y += 6;
+            }
+            y += 4;
+          });
+        }
+        
+        // Add page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() / 2, 
+            doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+        }
+        
+        // Save the PDF
+        doc.save(`replay-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert(`Error generating PDF: ${error.message}`);
+      }
+    },
+    
+    truncateUrl(url) {
+      // Truncate long URLs for better PDF layout
+      if (!url) return '-';
+      return url.length > 50 ? url.substring(0, 47) + '...' : url;
     }
   }
 }

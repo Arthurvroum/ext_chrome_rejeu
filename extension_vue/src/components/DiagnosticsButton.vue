@@ -13,6 +13,12 @@
       <h4>Content Script Status</h4>
       <pre v-if="results.contentScriptStatus">{{ formatJson(results.contentScriptStatus) }}</pre>
       
+      <div class="tab-functions">
+        <h4>Tab Functions</h4>
+        <button @click="testAdvancedTab" class="test-button">Test Advanced Tab</button>
+        <button @click="testReplayTab" class="test-button">Test Replay Tab</button>
+      </div>
+      
       <div class="action-buttons">
         <button @click="showResults = false">Close</button>
         <button @click="runDiagnostics">Refresh</button>
@@ -113,7 +119,54 @@ export default {
     },
     
     formatJson(data) {
-      return JSON.stringify(data, null, 2);
+      if (!data) return 'No data available';
+      
+      try {
+        if (typeof data === 'object') {
+          return JSON.stringify(data, null, 2);
+        } else if (typeof data === 'string') {
+          // Try to parse as JSON if it's a string
+          try {
+            const parsed = JSON.parse(data);
+            return JSON.stringify(parsed, null, 2);
+          } catch {
+            // If parsing fails, just return the string
+            return data;
+          }
+        }
+        return String(data);
+      } catch (e) {
+        console.error('Error formatting JSON:', e);
+        return String(data);
+      }
+    },
+    
+    testAdvancedTab() {
+      console.log('Testing advanced tab opening...');
+      chrome.runtime.sendMessage({
+        action: 'openAdvancedWindow',
+        tab: 'record'
+      }, (response) => {
+        console.log('Advanced tab response:', response);
+        if (!response || !response.success) {
+          alert('Failed to open advanced tab. Check console for details.');
+        }
+      });
+    },
+    
+    testReplayTab() {
+      console.log('Testing replay tab opening...');
+      const sampleData = [{ method: 'GET', url: 'https://example.com/test' }];
+      
+      chrome.runtime.sendMessage({
+        action: 'openReplayWindow',
+        data: sampleData
+      }, (response) => {
+        console.log('Replay tab response:', response);
+        if (!response || !response.success) {
+          alert('Failed to open replay tab. Check console for details.');
+        }
+      });
     }
   }
 }
@@ -181,5 +234,26 @@ pre {
 
 .action-buttons button:last-child {
   background-color: #007bff;
+}
+
+.tab-functions {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.test-button {
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.test-button:hover {
+  background-color: #0056b3;
 }
 </style>

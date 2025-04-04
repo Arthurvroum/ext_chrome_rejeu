@@ -159,3 +159,153 @@ function sendTabMessagePromise(tabId, message) {
 
 // Make diagnostic function globally available
 window.runDiagnostics = runDiagnostics;
+
+/**
+ * Troubleshooting utilities for Chrome Extension
+ * Provides debugging and diagnostic capabilities
+ */
+
+// Log levels
+const LOG_LEVELS = {
+  DEBUG: 'debug',
+  INFO: 'info',
+  WARN: 'warn',
+  ERROR: 'error'
+};
+
+// Enhanced logging with timestamps and categories
+function logWithDetails(level, category, message, data) {
+  const timestamp = new Date().toISOString();
+  const prefix = `[${timestamp}] [${category}] [${level.toUpperCase()}]`;
+  
+  if (data !== undefined) {
+    console[level](`${prefix} ${message}`, data);
+  } else {
+    console[level](`${prefix} ${message}`);
+  }
+}
+
+// Helper for diagnosing PDF generation issues
+function diagnoseReportGenerationIssues() {
+  logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'Diagnosing report generation issues...');
+  
+  // Check if required libraries are available
+  const diagnosticResults = {
+    jsPdfAvailable: typeof window.jspdf !== 'undefined',
+    jsPdfConstructorAvailable: 
+      (typeof window.jspdf !== 'undefined') && 
+      (typeof window.jspdf.jsPDF === 'function'),
+    jsPdfAutoTableAvailable: 
+      (typeof window.jspdf !== 'undefined') && 
+      (typeof window.jspdf.jsPDF === 'function') &&
+      (typeof window.jspdf.jsPDF.prototype.autoTable === 'function')
+  };
+  
+  // Log diagnostic results
+  logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'PDF generation diagnostics:', diagnosticResults);
+  
+  // Report if libraries are missing
+  if (!diagnosticResults.jsPdfAvailable) {
+    logWithDetails(LOG_LEVELS.ERROR, 'Troubleshoot', 'jsPDF library not found');
+  } else if (!diagnosticResults.jsPdfConstructorAvailable) {
+    logWithDetails(LOG_LEVELS.ERROR, 'Troubleshoot', 'jsPDF constructor not available');
+  } 
+  
+  if (!diagnosticResults.jsPdfAutoTableAvailable) {
+    logWithDetails(LOG_LEVELS.WARN, 'Troubleshoot', 'jsPDF-AutoTable plugin not found');
+  }
+  
+  return diagnosticResults;
+}
+
+// Check for storage issues
+function diagnoseStorageIssues(callback) {
+  logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'Diagnosing storage issues...');
+  
+  // Attempt to write and read from storage
+  const testData = { 
+    test: 'data', 
+    timestamp: Date.now() 
+  };
+  
+  chrome.storage.local.set({ 'diagnosticTest': testData }, () => {
+    if (chrome.runtime.lastError) {
+      logWithDetails(LOG_LEVELS.ERROR, 'Troubleshoot', 'Storage write failed:', chrome.runtime.lastError);
+      if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+      return;
+    }
+    
+    // Try to read it back
+    chrome.storage.local.get('diagnosticTest', (result) => {
+      if (chrome.runtime.lastError) {
+        logWithDetails(LOG_LEVELS.ERROR, 'Troubleshoot', 'Storage read failed:', chrome.runtime.lastError);
+        if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      
+      const readData = result.diagnosticTest;
+      const success = readData && readData.test === testData.test;
+      
+      if (success) {
+        logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'Storage diagnostic passed');
+      } else {
+        logWithDetails(LOG_LEVELS.ERROR, 'Troubleshoot', 'Storage data mismatch:', { 
+          written: testData, 
+          read: readData 
+        });
+      }
+      
+      // Clean up test data
+      chrome.storage.local.remove('diagnosticTest');
+      
+      if (callback) callback({ success, readData });
+    });
+  });
+}
+
+// Gather comprehensive diagnostic information
+function runDiagnostics(callback) {
+  logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'Running comprehensive diagnostics...');
+  
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    environment: {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language
+    },
+    extension: {
+      id: chrome.runtime.id,
+      manifest: chrome.runtime.getManifest()
+    }
+  };
+  
+  // Get PDF library diagnostics
+  diagnostics.pdfLibraries = diagnoseReportGenerationIssues();
+  
+  // Check storage
+  diagnoseStorageIssues(storageResult => {
+    diagnostics.storage = storageResult;
+    
+    // Log diagnostics summary
+    logWithDetails(LOG_LEVELS.INFO, 'Troubleshoot', 'Diagnostics complete:', diagnostics);
+    
+    if (callback) callback(diagnostics);
+  });
+}
+
+// Export troubleshooting utilities
+const troubleshootUtils = {
+  log: logWithDetails,
+  levels: LOG_LEVELS,
+  diagnoseReportGeneration: diagnoseReportGenerationIssues,
+  diagnoseStorage: diagnoseStorageIssues,
+  runDiagnostics
+};
+
+// Make available globally
+if (typeof self !== 'undefined') {
+  self.troubleshootUtils = troubleshootUtils;
+} else if (typeof window !== 'undefined') {
+  window.troubleshootUtils = troubleshootUtils;
+}
