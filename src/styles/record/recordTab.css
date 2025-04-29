@@ -1,0 +1,50 @@
+.record-tab {
+  text-align: left;
+  padding: 5px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  flex: 1;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.content-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* For full window mode, ensure proper spacing */
+:global(.full-window) .record-tab {
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.request-list {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+h3 {
+  margin: 15px 0;
+  font-size: 1.2rem;
+  color: #495057;
+  padding: 10px 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 20px;
+}

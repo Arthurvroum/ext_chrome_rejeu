@@ -1,0 +1,81 @@
+/* This file contains styles specifically for the full-width replay window */
+
+/* Only target the full window mode, not the popup */
+body.full-window-mode {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* Target the app container */
+body.full-window-mode #app {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Target the replay tab only in full window mode */
+body.full-window-mode .replay-tab {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Fix the spacing in header area */
+body.full-window-mode .compact-header-container {
+  margin-bottom: 4px !important;
+}
+
+/* Fix the card spacing issues */
+body.full-window-mode .v-card-title,
+body.full-window-mode .scenario-title {
+  padding: 4px 12px !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
+  min-height: 0 !important;
+  font-size: 1rem !important;
+}
+
+body.full-window-mode .v-card-subtitle,
+body.full-window-mode .scenario-subtitle {
+  padding: 0px 12px 4px 12px !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
+  min-height: 0 !important;
+  font-size: 0.8rem !important;
+}
+
+/* Enforce minimal height for header row */
+body.full-window-mode .v-row {
+  min-height: 0 !important;
+}
+
+/* Force header columns to be side by side on the same row */
+body.full-window-mode .compact-header-container .v-col {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* Fix the button height in header */
+body.full-window-mode .compact-header-container .v-btn {
+  height: auto !important;
+  padding: 0px 8px !important;
+  font-size: 0.8rem !important;
+}
+
+/* Make the title area take minimal space */
+body.full-window-mode .ultra-compact-header {
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Make the steps scrollable container work properly */
+body.full-window-mode .steps-scrollable-container {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 150px) !important; /* Reduced to account for smaller header */
+}

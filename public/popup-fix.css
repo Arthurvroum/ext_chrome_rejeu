@@ -1,0 +1,28 @@
+/* Simple CSS Popup Size Fix */
+
+/* Ensure popup always has good dimensions regardless of other settings */
+body:not(.tab-mode) {
+  min-width: 500px !important;
+  min-height: 600px !important;
+  width: 500px !important;
+  height: 600px !important;
+  overflow: auto !important;
+}
+
+/* Make sure app container fills the popup */
+body:not(.tab-mode) #app {
+  min-width: 500px !important;
+  min-height: 600px !important;
+  width: auto !important; 
+  height: auto !important;
+  overflow: auto !important;
+}
+
+/* Set proper dimensions for elements inside popup */
+body:not(.tab-mode) .record-tab,
+body:not(.tab-mode) .replay-tab,
+body:not(.tab-mode) .config-tab,
+body:not(.tab-mode) .reports-tab {
+  min-height: 500px !important;
+  width: 100% !important;
+}

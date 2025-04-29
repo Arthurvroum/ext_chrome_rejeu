@@ -1,0 +1,48 @@
+.replay-tab {
+  width: 100%;
+  height: 100%;
+}
+
+.replay-tab-container {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+}
+
+/* Ultra-compact header with no spacing */
+.ultra-compact-header {
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+.scenario-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make steps section properly scrollable */
+.steps-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+}
+
+/* Force minimal spacing for title and subtitle */
+.replay-tab .v-card-title {
+  line-height: 1.1 !important;
+  padding: 6px 12px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+.replay-tab .v-card-subtitle {
+  line-height: 1.1 !important;
+  padding: 0px 12px 6px 12px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
